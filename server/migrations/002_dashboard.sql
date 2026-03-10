@@ -1,0 +1,4 @@
+-- Phase 8: score tracking + match lifecycle
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS score_a INT NOT NULL DEFAULT 0;
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS score_b INT NOT NULL DEFAULT 0;
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS ended_at TIMESTAMPTZ;

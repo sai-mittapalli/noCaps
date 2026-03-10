@@ -26,6 +26,10 @@ export interface MatchDTO {
   venue: string;
   createdAt: string;
   isLive: boolean;
+  scoreA: number;
+  scoreB: number;
+  hostId: string | null;
+  endedAt: string | null;
   cameras: CameraDTO[];
 }
 

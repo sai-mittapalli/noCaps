@@ -1,12 +1,15 @@
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/AppNavigator';
 import { colors, fontSize, spacing } from '../theme';
+import { useAuth } from '../context/AuthContext';
+import { disconnectSocket } from '../api';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
-const actions = [
+// All possible actions — filtered by role below
+const hostActions = [
   {
     key: 'create',
     title: 'Create Match',
@@ -30,9 +33,53 @@ const actions = [
   },
 ];
 
+const viewerActions = [
+  {
+    key: 'watch',
+    title: 'Watch a Match',
+    description: 'Browse live streams',
+    icon: '>',
+    route: 'MatchList' as const,
+  },
+];
+
 export default function HomeScreen({ navigation }: Props) {
+  const { user, logout } = useAuth();
+
+  const actions = user?.role === 'host' ? hostActions : viewerActions;
+
+  const handleLogout = () => {
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: async () => {
+          disconnectSocket();
+          await logout();
+        },
+      },
+    ]);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
+      {/* Top bar — user info + logout */}
+      <View style={styles.topBar}>
+        <View>
+          <Text style={styles.greeting}>Hello, {user?.displayName}</Text>
+          <View style={styles.roleBadge}>
+            <Text style={styles.roleBadgeText}>
+              {user?.role === 'host' ? 'HOST' : 'VIEWER'}
+            </Text>
+          </View>
+        </View>
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+          <Text style={styles.logoutText}>Sign Out</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Logo */}
       <View style={styles.header}>
         <Image
           source={require('../../assets/logo.png')}
@@ -42,6 +89,7 @@ export default function HomeScreen({ navigation }: Props) {
         <Text style={styles.tagline}>AI-Powered Sports Broadcasting</Text>
       </View>
 
+      {/* Action cards */}
       <View style={styles.actions}>
         {actions.map((action) => (
           <TouchableOpacity
@@ -60,6 +108,13 @@ export default function HomeScreen({ navigation }: Props) {
             <Text style={styles.chevron}>{'>'}</Text>
           </TouchableOpacity>
         ))}
+
+        {/* Friendly note for viewers that they can't create matches */}
+        {user?.role === 'viewer' && (
+          <Text style={styles.viewerNote}>
+            Want to host? Create a new account with the Host role.
+          </Text>
+        )}
       </View>
 
       <Text style={styles.footer}>Team 3: Tabish, Akshara, Sai, Kiruthika</Text>
@@ -72,6 +127,40 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     paddingHorizontal: spacing.lg,
+  },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingTop: spacing.md,
+  },
+  greeting: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  roleBadge: {
+    marginTop: 4,
+    backgroundColor: colors.primaryDark,
+    borderRadius: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    alignSelf: 'flex-start',
+  },
+  roleBadgeText: {
+    fontSize: fontSize.xs,
+    color: colors.primary,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  logoutButton: {
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+  },
+  logoutText: {
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+    fontWeight: '500',
   },
   header: {
     flex: 1,
@@ -132,6 +221,12 @@ const styles = StyleSheet.create({
   chevron: {
     fontSize: fontSize.lg,
     color: colors.textMuted,
+  },
+  viewerNote: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: spacing.xs,
   },
   footer: {
     fontSize: fontSize.xs,

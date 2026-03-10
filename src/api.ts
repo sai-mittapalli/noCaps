@@ -1,11 +1,64 @@
 import { io, Socket } from 'socket.io-client';
+import type { AuthUser } from './context/AuthContext';
+import type { UserRole } from './context/AuthContext';
 
 // Change this to your server's IP when testing on a real device.
 // Use your computer's local IP (e.g. 192.168.x.x), not localhost,
 // since the phone is a separate device on the network.
 const SERVER_URL = 'http://10.0.0.105:3000';
 
-// --- REST API ---
+// --- Auth token (set after login, cleared on logout) ---
+
+let authToken: string | null = null;
+
+export function setAuthToken(token: string | null) {
+  authToken = token;
+}
+
+function authHeaders(): Record<string, string> {
+  return authToken
+    ? { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` }
+    : { 'Content-Type': 'application/json' };
+}
+
+// --- Auth API ---
+
+interface AuthResponse {
+  token: string;
+  user: AuthUser;
+}
+
+export async function registerApi(data: {
+  email: string;
+  password: string;
+  role: UserRole;
+  displayName: string;
+}): Promise<AuthResponse> {
+  const res = await fetch(`${SERVER_URL}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  const body = await res.json();
+  if (!res.ok) throw new Error(body.error || 'Registration failed');
+  return body;
+}
+
+export async function loginApi(data: {
+  email: string;
+  password: string;
+}): Promise<AuthResponse> {
+  const res = await fetch(`${SERVER_URL}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  const body = await res.json();
+  if (!res.ok) throw new Error(body.error || 'Login failed');
+  return body;
+}
+
+// --- Match DTOs ---
 
 export interface CameraDTO {
   number: number;
@@ -25,6 +78,8 @@ export interface MatchDTO {
   cameras: CameraDTO[];
 }
 
+// --- REST API ---
+
 export async function createMatch(data: {
   title: string;
   teamA: string;
@@ -34,10 +89,13 @@ export async function createMatch(data: {
 }): Promise<MatchDTO> {
   const res = await fetch(`${SERVER_URL}/api/matches`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders(),
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to create match');
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || 'Failed to create match');
+  }
   return res.json();
 }
 
@@ -63,6 +121,11 @@ export function getSocket(): Socket {
     socket = io(SERVER_URL, { transports: ['websocket'] });
   }
   return socket;
+}
+
+export function disconnectSocket() {
+  socket?.disconnect();
+  socket = null;
 }
 
 export function joinMatchAsCamera(
