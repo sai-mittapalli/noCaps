@@ -28,7 +28,7 @@ const basketball: SportConfig = {
       number: 1,
       label: 'Main',
       description: 'Sideline, center court',
-      tip: 'Elevate to ~10–12 ft. Both baskets should be visible at each edge. Half-court line should cross center of frame.',
+      tip: 'Extend tripod to full height (~5–6 ft) at center sideline. Both baskets should be visible at each side of frame. Half-court line should cross the center.',
       overlay: [
         // Court outline (trapezoid — near sideline at bottom, far at top)
         { type: 'path', props: { d: 'M 5,158 L 95,158 L 90,72 L 10,72 Z' } },
@@ -103,8 +103,8 @@ const basketball: SportConfig = {
     {
       number: 4,
       label: 'Overview',
-      description: 'Full court, high angle',
-      tip: 'As high as possible (bleachers/balcony). Full court should be visible. Both 3-point arcs in frame.',
+      description: 'Full court, widest angle',
+      tip: 'Place tripod on a table, bleacher seat, or any raised surface at center sideline. Goal is to see both baskets and as much of the court as possible. Extend tripod to full height.',
       overlay: [
         // Court outline (bird's eye, slight perspective)
         { type: 'path', props: { d: 'M 8,155 L 92,155 L 92,25 L 8,25 Z' } },
@@ -247,30 +247,28 @@ const billiards: SportConfig = {
   roles: [
     {
       number: 1,
-      label: 'Overhead',
-      description: 'Directly above table',
-      tip: 'Mount directly above table center, ~1.5–2m height. Hold phone in LANDSCAPE. Full table with all pockets should be visible.',
+      label: 'Elevated Side',
+      description: 'Long side, raised on chair/table',
+      tip: 'Place tripod on a chair or small table at the center of the long rail, aimed slightly downward. You should see the full table surface and all 6 pockets. This is the main broadcast angle.',
       overlay: [
-        // Table outline
-        { type: 'rect', props: { x: 5, y: 35, width: 90, height: 107 } },
-        // Cushion/rail inset
-        { type: 'rect', props: { x: 10, y: 42, width: 80, height: 93 } },
-        // Corner pockets
-        { type: 'circle', props: { cx: 10, cy: 42, r: 4 } },
-        { type: 'circle', props: { cx: 90, cy: 42, r: 4 } },
-        { type: 'circle', props: { cx: 10, cy: 135, r: 4 } },
-        { type: 'circle', props: { cx: 90, cy: 135, r: 4 } },
-        // Side pockets (middle of long rails)
-        { type: 'circle', props: { cx: 10, cy: 88, r: 4 } },
-        { type: 'circle', props: { cx: 90, cy: 88, r: 4 } },
-        // Head string (racking line, at 1/4 from head end)
-        { type: 'line', props: { x1: 10, y1: 75, x2: 90, y2: 75 } },
-        // Foot spot
-        { type: 'circle', props: { cx: 50, cy: 65, r: 1.5 } },
-        // Head spot
-        { type: 'circle', props: { cx: 50, cy: 112, r: 1.5 } },
-        // Center spot
-        { type: 'circle', props: { cx: 50, cy: 88, r: 1.5 } },
+        // Table outline (elevated perspective — more surface visible than ground level)
+        { type: 'path', props: { d: 'M 5,158 L 95,158 L 92,75 L 8,75 Z' } },
+        // Near corner pockets
+        { type: 'circle', props: { cx: 5, cy: 158, r: 4 } },
+        { type: 'circle', props: { cx: 95, cy: 158, r: 4 } },
+        // Far corner pockets
+        { type: 'circle', props: { cx: 8, cy: 75, r: 3.5 } },
+        { type: 'circle', props: { cx: 92, cy: 75, r: 3.5 } },
+        // Near side pocket (center of near rail)
+        { type: 'circle', props: { cx: 50, cy: 158, r: 4 } },
+        // Far side pocket
+        { type: 'circle', props: { cx: 50, cy: 75, r: 3.5 } },
+        // Head string line (1/4 from left end)
+        { type: 'line', props: { x1: 27, y1: 158, x2: 28, y2: 75 } },
+        // Spots visible on surface
+        { type: 'circle', props: { cx: 27, cy: 117, r: 1.5 } },
+        { type: 'circle', props: { cx: 50, cy: 117, r: 1.5 } },
+        { type: 'circle', props: { cx: 73, cy: 117, r: 1.5 } },
       ],
     },
     {
