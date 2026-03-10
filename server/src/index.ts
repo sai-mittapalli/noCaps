@@ -30,7 +30,7 @@ const publicPath = path.join(__dirname, '..', 'public');
 app.use(express.static(publicPath));
 
 // SPA fallback — any route not matched above serves index.html
-app.get('*', (_req, res) => {
+app.get('/{*path}', (_req, res) => {
   res.sendFile(path.join(publicPath, 'index.html'));
 });
 
