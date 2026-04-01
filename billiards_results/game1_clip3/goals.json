@@ -1,0 +1,23 @@
+[
+  {
+    "pocket": "Bottom-Left",
+    "frame": 32,
+    "time_s": 1.068,
+    "peak_activity": 9.4,
+    "folder": "/Users/kiruthikaraja/CMU/Spring 2026/Sports tech/events/game1_clip3/goal_frame0032_bottom-left",
+    "files_saved": [
+      "pre_30f_frame0002.png",
+      "pre_20f_frame0012.png",
+      "pre_10f_frame0022.png",
+      "pre_05f_frame0027.png",
+      "pre_02f_frame0030.png",
+      "EVENT_frame0032.png",
+      "post_02f_frame0034.png",
+      "post_05f_frame0037.png",
+      "post_10f_frame0042.png",
+      "post_20f_frame0052.png",
+      "post_30f_frame0062.png",
+      "goal_clip.mp4"
+    ]
+  }
+]
