@@ -1,0 +1,41 @@
+{
+  "clip": "game1_clip3",
+  "pockets": [
+    {
+      "label": "Top-Left",
+      "cx": 321.0,
+      "cy": 116.0,
+      "radius": 35.0
+    },
+    {
+      "label": "Top-Middle",
+      "cx": 271.0,
+      "cy": 246.0,
+      "radius": 35.0
+    },
+    {
+      "label": "Top-Right",
+      "cx": 736.0,
+      "cy": 111.0,
+      "radius": 35.0
+    },
+    {
+      "label": "Bottom-Left",
+      "cx": 785.0,
+      "cy": 245.0,
+      "radius": 35.0
+    },
+    {
+      "label": "Bottom-Middle",
+      "cx": 205.0,
+      "cy": 446.0,
+      "radius": 35.0
+    },
+    {
+      "label": "Bottom-Right",
+      "cx": 849.0,
+      "cy": 449.0,
+      "radius": 35.0
+    }
+  ]
+}

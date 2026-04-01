@@ -1,0 +1,191 @@
+[
+  {
+    "type": "collision",
+    "frame": 1,
+    "balls": [
+      1,
+      7
+    ],
+    "time_s": 0.033
+  },
+  {
+    "type": "collision",
+    "frame": 1,
+    "balls": [
+      8,
+      15
+    ],
+    "time_s": 0.033
+  },
+  {
+    "type": "shot_start",
+    "frame": 9,
+    "ball": 1,
+    "time_s": 0.3
+  },
+  {
+    "type": "collision",
+    "frame": 22,
+    "balls": [
+      1,
+      6
+    ],
+    "time_s": 0.734
+  },
+  {
+    "type": "collision",
+    "frame": 32,
+    "balls": [
+      1,
+      5
+    ],
+    "time_s": 1.068
+  },
+  {
+    "type": "collision",
+    "frame": 32,
+    "balls": [
+      6,
+      8
+    ],
+    "time_s": 1.068
+  },
+  {
+    "type": "collision",
+    "frame": 34,
+    "balls": [
+      1,
+      6
+    ],
+    "time_s": 1.134
+  },
+  {
+    "type": "collision",
+    "frame": 36,
+    "balls": [
+      5,
+      6
+    ],
+    "time_s": 1.201
+  },
+  {
+    "type": "collision",
+    "frame": 56,
+    "balls": [
+      2,
+      6
+    ],
+    "time_s": 1.869
+  },
+  {
+    "type": "collision",
+    "frame": 59,
+    "balls": [
+      6,
+      14
+    ],
+    "time_s": 1.969
+  },
+  {
+    "type": "collision",
+    "frame": 71,
+    "balls": [
+      6,
+      14
+    ],
+    "time_s": 2.369
+  },
+  {
+    "type": "collision",
+    "frame": 73,
+    "balls": [
+      2,
+      14
+    ],
+    "time_s": 2.436
+  },
+  {
+    "type": "rail_hit",
+    "frame": 96,
+    "ball": 1,
+    "time_s": 3.203
+  },
+  {
+    "type": "collision",
+    "frame": 118,
+    "balls": [
+      6,
+      8
+    ],
+    "time_s": 3.937
+  },
+  {
+    "type": "collision",
+    "frame": 118,
+    "balls": [
+      6,
+      15
+    ],
+    "time_s": 3.937
+  },
+  {
+    "type": "collision",
+    "frame": 119,
+    "balls": [
+      8,
+      15
+    ],
+    "time_s": 3.971
+  },
+  {
+    "type": "collision",
+    "frame": 145,
+    "balls": [
+      16,
+      17
+    ],
+    "time_s": 4.838
+  },
+  {
+    "type": "shot_start",
+    "frame": 156,
+    "ball": 1,
+    "time_s": 5.205
+  },
+  {
+    "type": "collision",
+    "frame": 156,
+    "balls": [
+      1,
+      8
+    ],
+    "time_s": 5.205
+  },
+  {
+    "type": "collision",
+    "frame": 156,
+    "balls": [
+      1,
+      15
+    ],
+    "time_s": 5.205
+  },
+  {
+    "type": "collision",
+    "frame": 156,
+    "balls": [
+      1,
+      16
+    ],
+    "time_s": 5.205
+  },
+  {
+    "type": "collision",
+    "frame": 156,
+    "balls": [
+      1,
+      17
+    ],
+    "time_s": 5.205
+  }
+]

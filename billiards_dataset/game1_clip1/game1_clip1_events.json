@@ -1,0 +1,32 @@
+[
+  {
+    "type": "pocket",
+    "frame": 20,
+    "ball": 16,
+    "time_s": 0.667
+  },
+  {
+    "type": "pocket",
+    "frame": 80,
+    "ball": 20,
+    "time_s": 2.669
+  },
+  {
+    "type": "pocket",
+    "frame": 92,
+    "ball": 17,
+    "time_s": 3.07
+  },
+  {
+    "type": "pocket",
+    "frame": 140,
+    "ball": 19,
+    "time_s": 4.671
+  },
+  {
+    "type": "pocket",
+    "frame": 140,
+    "ball": 21,
+    "time_s": 4.671
+  }
+]
