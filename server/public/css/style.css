@@ -268,6 +268,10 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .watch-director-banner { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); background: rgba(255,77,77,0.92); color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; padding: 6px 14px; border-radius: 20px; white-space: nowrap; z-index: 10; display: flex; align-items: center; gap: 6px; }
 .watch-director-banner::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #fff; }
 
+/* Auto camera-switch overlay */
+.fg-auto-overlay { position: absolute; top: 14px; right: 14px; background: rgba(0,0,0,0.72); border: 1px solid rgba(255,255,255,0.18); color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; padding: 5px 12px; border-radius: 20px; white-space: nowrap; z-index: 10; pointer-events: none; }
+.fg-auto-overlay::before { content: '⚡ '; }
+
 /* ── Replays Page ─────────────────────────────────────────── */
 .replays-page { padding: 16px 16px 24px; }
 .replays-section-title { font-size: 11px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }

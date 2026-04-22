@@ -23,9 +23,9 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // Full game video streaming with range-request support (for seeking)
 const GAME_VIDEOS: Record<string, string> = {
-  lateral:  path.resolve(__dirname, '..', '..', 'billiards_dataset', 'realgame-2', 'events', 'IMG_1826', 'IMG_1826_annotated.mp4'),
-  frontal:  path.resolve(__dirname, '..', '..', 'billiards_dataset', 'realgame-2', 'IMG_5254.MOV'),
-  diagonal: path.resolve(__dirname, '..', '..', 'billiards_dataset', 'realgame-2', 'IMG_7658 2.MOV'),
+  lateral:  path.resolve(__dirname, '..', '..', 'ours', 'IMG_1826.MOV'),
+  frontal:  path.resolve(__dirname, '..', '..', 'ours', 'IMG_5254.MOV'),
+  diagonal: path.resolve(__dirname, '..', '..', 'ours', 'IMG_7658 2.MOV'),
 };
 
 app.get('/game/:camera', (req, res) => {

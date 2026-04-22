@@ -7,22 +7,28 @@ function _fmtTime(s) {
 // Full-game sync constants (lateral is reference)
 const FG_OFFSETS  = { 1: 0, 2: 11, 3: 6 };   // seconds each camera is ahead of lateral
 const FG_DURATION = 982;                        // total lateral duration in seconds
-const FG_EVENTS   = [
-  { t:  32, type: 'goal'     },
-  { t:  90, type: 'goal'     },
-  { t: 195, type: 'goal'     },
-  { t: 347, type: 'goal'     },
-  { t: 384, type: 'scratch'  },
-  { t: 414, type: 'goal'     },
-  { t: 502, type: 'scratch'  },
-  { t: 503, type: 'goal'     },
-  { t: 529, type: 'goal'     },
-  { t: 581, type: 'goal'     },
-  { t: 656, type: 'scratch'  },
-  { t: 680, type: 'goal'     },
-  { t: 693, type: 'goal'     },
-  { t: 720, type: 'goal'     },
-  { t: 957, type: 'game_over'},
+// cam: which camera has the best view of that pocket
+//   2 = Frontal  (center pockets — seen head-on)
+//   3 = Diagonal (corner pockets — seen from the corner angle)
+// cam values computed by score_camera_views.py — picked by highest pocket-ROI
+// activity (motion) across a 3-second window before each event timestamp.
+const FG_EVENTS = [
+  { t:  32, type: 'goal',     pocket: 'Bottom-Right',  cam: 1 },
+  { t:  90, type: 'goal',     pocket: 'Bottom-Center', cam: 2 },
+  { t: 195, type: 'goal',     pocket: 'Bottom-Right',  cam: 3 },
+  { t: 347, type: 'goal',     pocket: 'Top-Right',     cam: 2 },
+  { t: 347, type: 'scratch',  pocket: 'Top-Right',     cam: 2 },
+  { t: 384, type: 'scratch',  pocket: 'Bottom-Center', cam: 2 },
+  { t: 414, type: 'goal',     pocket: 'Bottom-Left',   cam: 1 },
+  { t: 502, type: 'scratch',  pocket: 'Bottom-Left',   cam: 2 },
+  { t: 503, type: 'goal',     pocket: 'Top-Left',      cam: 1 },
+  { t: 529, type: 'goal',     pocket: 'Bottom-Center', cam: 2 },
+  { t: 581, type: 'goal',     pocket: 'Top-Left',      cam: 2 },
+  { t: 656, type: 'scratch',  pocket: 'Top-Center',    cam: 3 },
+  { t: 680, type: 'goal',     pocket: 'Top-Right',     cam: 1 },
+  { t: 693, type: 'goal',     pocket: 'Top-Right',     cam: 1 },
+  { t: 720, type: 'goal',     pocket: 'Bottom-Left',   cam: 1 },
+  { t: 957, type: 'game_over',pocket: 'Bottom-Right',  cam: 1 },
 ];
 
 const WatchPage = {
@@ -42,6 +48,8 @@ const WatchPage = {
   _fgVids: new Map(),        // camNum → <video>
   _fgRaf: null,              // requestAnimationFrame handle
   _fgDragging: false,
+  _fgAutoSwitchTimeout: null,
+  _fgLastSwitchT: -Infinity, // lateral timestamp of last auto-switch, avoids re-firing
 
   render(params) {
     this._code = params.code;
@@ -193,9 +201,11 @@ const WatchPage = {
     this._demoVids.forEach(v => { v.pause(); v.src = ''; });
     this._demoVids.clear();
     if (this._fgRaf) { cancelAnimationFrame(this._fgRaf); this._fgRaf = null; }
+    if (this._fgAutoSwitchTimeout) { clearTimeout(this._fgAutoSwitchTimeout); this._fgAutoSwitchTimeout = null; }
     this._fgVids.forEach(v => { v.pause(); v.src = ''; });
     this._fgVids.clear();
     this._fgDragging = false;
+    this._fgLastSwitchT = -Infinity;
     this._match = null;
   },
 
@@ -579,7 +589,7 @@ const WatchPage = {
       main.muted = true;
       mainWrap.querySelectorAll('.demo-main-video').forEach(el => { if (el !== main) el.remove(); });
       if (!mainWrap.contains(main)) mainWrap.insertBefore(main, mainWrap.firstChild);
-      main.load();
+      if (main.readyState === 0) main.load();
       main.play().catch(() => {
         document.getElementById('fgPlayIcon')?.classList.remove('hidden');
         document.getElementById('fgPauseIcon')?.classList.add('hidden');
@@ -596,7 +606,15 @@ const WatchPage = {
       const cam = this._match.cameras.find(c => c.number === num);
       const thumb = document.createElement('div');
       thumb.className = 'watch-thumb';
-      thumb.onclick = () => { this._featured = num; this._fgLayout(); };
+      thumb.onclick = () => {
+        if (this._fgAutoSwitchTimeout) {
+          clearTimeout(this._fgAutoSwitchTimeout);
+          this._fgAutoSwitchTimeout = null;
+          this._fgHideAutoOverlay();
+        }
+        this._featured = num;
+        this._fgLayout();
+      };
       thumb.appendChild(v);
       const lbl = document.createElement('div');
       lbl.className = 'watch-thumb-label';
@@ -621,6 +639,12 @@ const WatchPage = {
       v.currentTime = t;
     });
     this._fgUpdateTimeline(lateralT);
+    this._fgLastSwitchT = -Infinity;
+    if (this._fgAutoSwitchTimeout) {
+      clearTimeout(this._fgAutoSwitchTimeout);
+      this._fgAutoSwitchTimeout = null;
+      this._fgHideAutoOverlay();
+    }
   },
 
   _fgToggleMute() {
@@ -649,10 +673,62 @@ const WatchPage = {
     const tick = () => {
       if (!this._fgVids.size) return;
       const lat = this._fgVids.get(1);
-      if (lat && !this._fgDragging) this._fgUpdateTimeline(lat.currentTime);
+      if (lat && !this._fgDragging) {
+        this._fgUpdateTimeline(lat.currentTime);
+        this._fgCheckAutoSwitch(lat.currentTime);
+      }
       this._fgRaf = requestAnimationFrame(tick);
     };
     this._fgRaf = requestAnimationFrame(tick);
+  },
+
+  _fgCheckAutoSwitch(t) {
+    if (this._fgDragging) return;
+    for (const ev of FG_EVENTS) {
+      if (ev.type !== 'goal' && ev.type !== 'game_over') continue;
+      // Trigger in a 2-second window after the event, but only once per event
+      if (t >= ev.t && t < ev.t + 2 && this._fgLastSwitchT !== ev.t) {
+        this._fgLastSwitchT = ev.t;
+        if (ev.cam !== this._featured) this._fgAutoSwitchTo(ev.cam, ev.pocket);
+        break;
+      }
+    }
+  },
+
+  _fgAutoSwitchTo(camNum, pocket) {
+    if (this._fgAutoSwitchTimeout) clearTimeout(this._fgAutoSwitchTimeout);
+    // Ensure target camera is at the correct synced position
+    const lat = this._fgVids.get(1);
+    const lateralT = lat ? lat.currentTime : 0;
+    const targetVid = this._fgVids.get(camNum);
+    if (targetVid) targetVid.currentTime = Math.max(0, lateralT + (FG_OFFSETS[camNum] || 0));
+    this._featured = camNum;
+    this._fgLayout();
+    this._fgShowAutoOverlay(pocket, camNum);
+    // Return to CAM 1 (lateral reference) after 6 seconds
+    this._fgAutoSwitchTimeout = setTimeout(() => {
+      this._featured = 1;
+      this._fgLayout();
+      this._fgHideAutoOverlay();
+      this._fgAutoSwitchTimeout = null;
+    }, 6000);
+  },
+
+  _fgShowAutoOverlay(pocket, camNum) {
+    let overlay = document.getElementById('fgAutoOverlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'fgAutoOverlay';
+      overlay.className = 'fg-auto-overlay';
+      document.getElementById('watchMainWrap')?.appendChild(overlay);
+    }
+    const cam = this._match?.cameras.find(c => c.number === camNum);
+    overlay.textContent = `AUTO · ${cam?.role || 'CAM ' + camNum} · ${pocket}`;
+    overlay.classList.remove('hidden');
+  },
+
+  _fgHideAutoOverlay() {
+    document.getElementById('fgAutoOverlay')?.classList.add('hidden');
   },
 
   _fgUpdateTimeline(t) {
