@@ -37,7 +37,20 @@ from .opencv_detector import OpenCVBallDetector, estimate_table_bbox
 from .tracker import CentroidTracker
 from .trajectory_builder import TrajectoryBuilder
 from .felt_config import get_felt_mask
-from .goal_pipeline import _draw_rois, _label_frame, COLORS
+from .goal_pipeline import COLORS
+
+
+def _draw_rois(frame: np.ndarray, rois: list, fired_idxs: set = None, flash: bool = False) -> np.ndarray:
+    out = frame.copy()
+    fired_idxs = fired_idxs or set()
+    for i, roi in enumerate(rois):
+        color = COLORS[i % len(COLORS)]
+        cx, cy, r = roi["cx"], roi["cy"], roi["radius"]
+        thickness = 3 if i in fired_idxs else 1
+        if flash and i in fired_idxs:
+            cv2.circle(out, (cx, cy), r + 6, (0, 50, 255), 2)
+        cv2.circle(out, (cx, cy), r, color, thickness)
+    return out
 
 
 def _draw_balls(frame: np.ndarray, active_tracks, trail_length: int = 20) -> np.ndarray:
@@ -133,12 +146,16 @@ def run_full_pipeline(
         traj_builder   = TrajectoryBuilder(window=40, smooth_k=5, fps=info.fps)
         goal_detector  = GoalDetector(
             rois=rois,
-            background_frames=15,
-            enter_threshold=4.0,
-            exit_threshold=3.0,
-            min_entry_frames=2,
-            max_entry_frames=25,
-            cooldown_frames=60,
+            background_frames=45,
+            enter_threshold=20.0,
+            exit_threshold=10.0,
+            approach_threshold=12.0,
+            approach_window=3,
+            prime_ttl=90,
+            min_entry_frames=3,
+            max_entry_frames=30,
+            cooldown_frames=150,  # ~5s — real pool shots don't happen faster
+            peak_ratio=2.5,
         )
 
         # ── Video writer ──────────────────────────────────────────────────
