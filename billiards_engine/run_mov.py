@@ -61,6 +61,14 @@ def main(argv=None):
     parser.add_argument("--start",   type=float, default=None, help="Trim start time (seconds)")
     parser.add_argument("--end",     type=float, default=None, help="Trim end time (seconds)")
     parser.add_argument("--reselect", action="store_true", help="Force re-annotating pocket ROIs")
+    parser.add_argument("--max-goals", type=int, default=None,
+                        help="Stop after detecting this many goals (for preview/validation)")
+    parser.add_argument("--compile", action="store_true",
+                        help="After detection, compile a highlight reel video")
+    parser.add_argument("--zoom", type=float, default=2.8,
+                        help="Zoom factor for the pocket close-up segment (default: 2.8)")
+    parser.add_argument("--slo", type=int, default=3,
+                        help="Slow-motion repeat factor for zoom segment (default: 3)")
     args = parser.parse_args(argv)
 
     input_path = args.input
@@ -113,11 +121,42 @@ def main(argv=None):
     gp.EVENTS_DIR = clip_dir.parent / "events"
 
     # ── Step 4: run pipeline ─────────────────────────────────────────────
-    events = run_goal_pipeline(str(clip_dir), force_reselect=args.reselect)
+    events = run_goal_pipeline(
+        str(clip_dir),
+        force_reselect=args.reselect,
+        max_goals=args.max_goals,
+    )
 
     print(f"\nDone. {len(events)} goal(s) detected.")
     out_base = gp.EVENTS_DIR / base_name
     print(f"Outputs → {out_base}")
+
+    # Auto-open first goal clip for preview
+    if events and args.max_goals:
+        import subprocess
+        ev = events[0]
+        folder_name = f"goal_frame{ev.frame_id:04d}_{ev.label.replace(' ', '_').lower()}"
+        clip_path = out_base / folder_name / "goal_clip.mp4"
+        if clip_path.exists():
+            print(f"\n  Opening first goal clip for preview...")
+            subprocess.Popen(["open", str(clip_path)])
+
+    # ── Step 5: compile highlight reel ───────────────────────────────────
+    if args.compile and events:
+        from .highlight_compiler import compile_highlights
+        rois_json  = str(clip_dir / "pocket_rois.json")
+        highlights = str(out_base / "highlights.mp4")
+        print(f"\n  Compiling highlight reel...")
+        compile_highlights(
+            video_path  = str(target_video),
+            events_dir  = str(out_base),
+            output_path = highlights,
+            rois_path   = rois_json,
+            zoom        = args.zoom,
+            slo_factor  = args.slo,
+        )
+        import subprocess
+        subprocess.Popen(["open", highlights])
 
 
 if __name__ == "__main__":
