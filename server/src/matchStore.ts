@@ -3,6 +3,31 @@ import { Match, MatchDTO, CameraDTO } from './types';
 // In-memory store — replace with a database in production
 const matches = new Map<string, Match>();
 
+// Pre-seeded billiards demo match (3 real camera angles, synced 5-min clip)
+export const DEMO_CODE = 'DEMO01';
+
+function seedDemo() {
+  const demo: Match = {
+    code: DEMO_CODE,
+    title: 'Billiards – Real Game 2',
+    teamA: 'Stripes',
+    teamB: 'Solids',
+    sport: 'Billiards',
+    venue: 'CMU Game Room',
+    createdAt: new Date('2026-04-19T00:00:00Z'),
+    isLive: true,
+    isDemo: true,
+    cameras: new Map([
+      [1, { socketId: 'demo-1', number: 1, role: 'Lateral',   isStreaming: true, videoSrc: '/demo/lateral.mp4'  }],
+      [2, { socketId: 'demo-2', number: 2, role: 'Frontal',   isStreaming: true, videoSrc: '/demo/frontal.mp4'  }],
+      [3, { socketId: 'demo-3', number: 3, role: 'Diagonal',  isStreaming: true, videoSrc: '/demo/diagonal.mp4' }],
+    ]),
+  };
+  matches.set(DEMO_CODE, demo);
+}
+
+seedDemo();
+
 function generateCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = '';
@@ -21,6 +46,7 @@ function toDTO(match: Match): MatchDTO {
       number: cam.number,
       role: cam.role,
       isStreaming: cam.isStreaming,
+      ...(cam.videoSrc ? { videoSrc: cam.videoSrc } : {}),
     });
   });
   return {
@@ -33,6 +59,7 @@ function toDTO(match: Match): MatchDTO {
     createdAt: match.createdAt.toISOString(),
     isLive: match.isLive,
     cameras,
+    ...(match.isDemo ? { isDemo: true } : {}),
   };
 }
 

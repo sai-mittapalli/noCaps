@@ -1,8 +1,9 @@
 export interface Camera {
   socketId: string;
   number: number;
-  role: string;       // "Main", "Side", "Close-up", "Wide"
+  role: string;
   isStreaming: boolean;
+  videoSrc?: string;   // set for pre-recorded demo cameras
 }
 
 export interface Match {
@@ -14,7 +15,8 @@ export interface Match {
   venue: string;
   createdAt: Date;
   isLive: boolean;
-  cameras: Map<number, Camera>;  // camera number → camera
+  cameras: Map<number, Camera>;
+  isDemo?: boolean;
 }
 
 export interface MatchDTO {
@@ -27,10 +29,12 @@ export interface MatchDTO {
   createdAt: string;
   isLive: boolean;
   cameras: CameraDTO[];
+  isDemo?: boolean;
 }
 
 export interface CameraDTO {
   number: number;
   role: string;
   isStreaming: boolean;
+  videoSrc?: string;
 }

@@ -67,6 +67,13 @@ export function setupSocket(io: Server) {
       console.log(`[socket] ${socket.id} watching match ${data.code}`);
     });
 
+    // Director forces all viewers onto a specific camera
+    socket.on('director-cut', (data: { code: string; cameraNumber: number | null }) => {
+      // Broadcast to everyone else in the room (viewers)
+      socket.to(data.code).emit('director-cut', { cameraNumber: data.cameraNumber });
+      console.log(`[director] cut to CAM ${data.cameraNumber} in ${data.code}`);
+    });
+
     // --- WebRTC Signaling ---
 
     // Viewer requests a camera's stream

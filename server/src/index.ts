@@ -17,17 +17,29 @@ app.use(cors());
 app.use(express.json());
 app.use('/api', routes);
 
-// Test pages
-app.get('/viewer', (_req, res) => {
+// Serve web app
+app.use(express.static(path.join(__dirname, '..', 'public')));
+
+// Billiards highlight video
+app.get('/highlights/billiards', (_req, res) => {
+  res.sendFile(
+    path.resolve(__dirname, '..', '..', 'billiards_dataset',
+      'realgame-1', 'events', 'IMG_5253', 'highlights.mp4'),
+    { headers: { 'Content-Type': 'video/mp4' } }
+  );
+});
+
+// Legacy test pages
+app.get('/test-viewer', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'test-viewer.html'));
 });
-app.get('/camera', (_req, res) => {
+app.get('/test-camera', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'test-camera.html'));
 });
 
-// Health check
-app.get('/', (_req, res) => {
-  res.json({ status: 'nocaps server running' });
+// SPA catch-all — serve index.html for any non-API route
+app.get(/^(?!\/api).*/, (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
 
 setupSocket(io);
