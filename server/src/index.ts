@@ -61,6 +61,31 @@ app.get('/highlights/billiards', (_req, res) => {
   );
 });
 
+// Multi-angle highlight reel (with transitions)
+app.get('/highlights/billiards-replay', (req, res) => {
+  const filePath = path.resolve(__dirname, '..', '..', 'billiards_dataset',
+    'realgame-2', 'highlights_output', 'highlights_reel_v4_full.mp4');
+  if (!fs.existsSync(filePath)) { res.status(404).send('Not found'); return; }
+  const stat     = fs.statSync(filePath);
+  const fileSize = stat.size;
+  const range    = req.headers.range;
+  if (range) {
+    const [startStr, endStr] = range.replace(/bytes=/, '').split('-');
+    const start = parseInt(startStr, 10);
+    const end   = endStr ? parseInt(endStr, 10) : Math.min(start + 10 * 1024 * 1024, fileSize - 1);
+    res.writeHead(206, {
+      'Content-Range':  `bytes ${start}-${end}/${fileSize}`,
+      'Accept-Ranges':  'bytes',
+      'Content-Length': end - start + 1,
+      'Content-Type':   'video/mp4',
+    });
+    fs.createReadStream(filePath, { start, end }).pipe(res);
+  } else {
+    res.writeHead(200, { 'Content-Length': fileSize, 'Content-Type': 'video/mp4', 'Accept-Ranges': 'bytes' });
+    fs.createReadStream(filePath).pipe(res);
+  }
+});
+
 // Legacy test pages
 app.get('/test-viewer', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'test-viewer.html'));
