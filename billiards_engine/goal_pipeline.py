@@ -34,28 +34,97 @@ COLORS = [(0,255,80),(0,220,255),(0,80,255),(255,100,0),(255,0,200),(80,255,255)
 DATASET_DIR = Path(__file__).parent.parent / "billiards-orginal" / "dataset"
 EVENTS_DIR  = Path(__file__).parent.parent / "events"
 
-# How many frames to extract around each goal event
-PRE_FRAMES  = [30, 20, 10, 5, 2]   # frames BEFORE the event
-POST_FRAMES = [2, 5, 10, 20, 30]   # frames AFTER the event
+PRE_FRAMES  = [30, 20, 10, 5, 2]
+POST_FRAMES = [2, 5, 10, 20, 30]
+
+_STATE_COLORS = {
+    "IDLE":     None,           # use default COLORS[i]
+    "PRIMED":   (0, 220, 255),  # cyan  — ball on felt heading here
+    "ENTERING": (0, 100, 255),  # orange — ball at pocket edge
+    "GOAL":     (0, 50,  255),  # red   — just fired
+}
 
 
-def _draw_rois(
+def _draw_overlay(
     frame: np.ndarray,
     rois: List[dict],
+    approach_rois: List[dict],
+    pocket_acts: List[float],
+    approach_acts: List[float],
+    states: List[str],
     fired_idxs: set = None,
     flash: bool = False,
+    enter_thr: float = 20.0,
+    approach_thr: float = 12.0,
 ) -> np.ndarray:
     out = frame.copy()
     fired_idxs = fired_idxs or set()
-    for i, roi in enumerate(rois):
-        cx, cy, r = roi["cx"], roi["cy"], roi["radius"]
+
+    for i, (roi, aroi) in enumerate(zip(rois, approach_rois)):
+        base_color = COLORS[i]
+        state = states[i] if i < len(states) else "IDLE"
         fired = i in fired_idxs
-        color = (0, 50, 255) if (fired and flash) else COLORS[i]
-        thick = 3 if (fired and flash) else 1
+
+        # ── Approach zone (dashed-style: draw with alpha blend) ───────────
+        acx, acy, ar = aroi["cx"], aroi["cy"], aroi["radius"]
+        app_act = approach_acts[i] if i < len(approach_acts) else 0.0
+        app_lit = app_act >= approach_thr
+        app_color = (0, 255, 200) if app_lit else (60, 60, 60)
+        app_thick = 2 if app_lit else 1
+        # Draw dashed circle via arc segments
+        for deg in range(0, 360, 20):
+            a1 = np.deg2rad(deg)
+            a2 = np.deg2rad(deg + 10)
+            p1 = (int(acx + ar * np.cos(a1)), int(acy + ar * np.sin(a1)))
+            p2 = (int(acx + ar * np.cos(a2)), int(acy + ar * np.sin(a2)))
+            cv2.line(out, p1, p2, app_color, app_thick, cv2.LINE_AA)
+        # Activity bar inside approach zone (horizontal)
+        bar_w = int(min(app_act / 40.0, 1.0) * ar * 2)
+        cv2.rectangle(out, (acx - ar, acy + ar - 6), (acx - ar + bar_w, acy + ar), app_color, -1)
+
+        # ── Arrow from approach zone to pocket ───────────────────────────
+        cx, cy, r = roi["cx"], roi["cy"], roi["radius"]
+        if app_lit or state in ("PRIMED", "ENTERING"):
+            arr_color = (0, 255, 200) if state == "PRIMED" else (0, 100, 255)
+            cv2.arrowedLine(out, (acx, acy), (cx, cy), arr_color, 2,
+                            tipLength=0.25, line_type=cv2.LINE_AA)
+
+        # ── Pocket ROI circle ─────────────────────────────────────────────
+        pact = pocket_acts[i] if i < len(pocket_acts) else 0.0
+        if fired and flash:
+            color, thick = (0, 50, 255), 4
+        elif state == "PRIMED":
+            color, thick = (0, 220, 255), 2
+        elif state == "ENTERING":
+            color, thick = (0, 100, 255), 3
+        else:
+            color, thick = base_color, 1
+
         cv2.circle(out, (cx, cy), r, color, thick)
-        cv2.circle(out, (cx, cy), 3, color, -1)
-        cv2.putText(out, f"P{i+1}", (cx + r + 3, cy + 5),
+        cv2.circle(out, (cx, cy), 4, color, -1)
+
+        # Activity fill: colour-coded ring fill proportional to activity
+        fill_r = int(r * min(pact / 40.0, 1.0))
+        if fill_r > 2:
+            overlay = out.copy()
+            cv2.circle(overlay, (cx, cy), fill_r, color, -1)
+            cv2.addWeighted(overlay, 0.18, out, 0.82, 0, out)
+
+        # Label: pocket name + state badge
+        label = f"P{i+1}"
+        badge = {"PRIMED": "►", "ENTERING": "●", "GOAL": "GOAL"}.get(state, "")
+        cv2.putText(out, f"{label} {badge}", (cx + r + 4, cy + 5),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.38, color, 1, cv2.LINE_AA)
+
+        # Activity numbers (small, below pocket)
+        cv2.putText(out, f"p:{pact:.0f} a:{app_act:.0f}",
+                    (cx - r, cy + r + 14),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.32, (160, 160, 160), 1, cv2.LINE_AA)
+
+    # Flash border on goal
+    if flash:
+        cv2.rectangle(out, (3, 3), (out.shape[1]-3, out.shape[0]-3), (0, 50, 255), 3)
+
     return out
 
 
@@ -64,6 +133,7 @@ def run_goal_pipeline(
     force_reselect: bool = False,
     pre_frames: List[int] = PRE_FRAMES,
     post_frames: List[int] = POST_FRAMES,
+    max_goals: Optional[int] = None,
 ) -> List[GoalEvent]:
     clip_name = os.path.basename(clip_dir.rstrip("/\\"))
     video_path = os.path.join(clip_dir, f"{clip_name}.mp4")
@@ -94,12 +164,18 @@ def run_goal_pipeline(
         print(f"\n  Running goal detector on {len(rois)} pocket ROIs...")
         detector = GoalDetector(
             rois=rois,
-            background_frames=15,
-            enter_threshold=4.0,
-            exit_threshold=3.0,
-            min_entry_frames=2,
+            background_frames=45,
+            enter_threshold=40.0,    # ball pocketing = strong signal (40+ MAD)
+            exit_threshold=15.0,
+            approach_threshold=18.0, # ball must be clearly visible on felt approach
+            approach_offset=90,
+            approach_radius=40,
+            approach_window=3,       # 3 consecutive frames of approach activity
+            prime_ttl=45,
+            min_entry_frames=3,
             max_entry_frames=25,
-            cooldown_frames=60,
+            cooldown_frames=120,     # 4s between goals
+            peak_ratio=3.0,          # peak must be 3× idle baseline
         )
 
         # ── Step 4: streaming pass ────────────────────────────────────────
@@ -115,6 +191,9 @@ def run_goal_pipeline(
 
         # Rolling buffer of (frame_id, annotated_frame) for pre-goal extraction
         pre_buffer: deque = deque(maxlen=pre_buf_size)
+
+        # Grab approach ROIs from the detector for use in clip annotation
+        approach_rois_saved = [s[3] for s in detector.pocket_states()]
 
         all_events: List[GoalEvent] = []
         active_flashes: List[tuple] = []   # (expire_frame, pocket_idx)
@@ -139,9 +218,19 @@ def run_goal_pipeline(
             fired = {idx for _, idx in active_flashes}
             flash = bool(fired)
 
-            out_f = _draw_rois(frame, rois, fired_idxs=fired, flash=flash)
-            if flash:
-                cv2.rectangle(out_f, (3,3), (info.width-3, info.height-3), (0,50,255), 3)
+            # Pull live state from detector
+            pocket_info = detector.pocket_states()
+            states       = [s[0] for s in pocket_info]
+            pocket_acts  = [s[1] for s in pocket_info]
+            approach_acts = [s[2] for s in pocket_info]
+            approach_rois = [s[3] for s in pocket_info]
+
+            out_f = _draw_overlay(
+                frame, rois, approach_rois,
+                pocket_acts, approach_acts, states,
+                fired_idxs=fired, flash=flash,
+                enter_thr=20.0, approach_thr=12.0,
+            )
 
             ov = out_f.copy()
             cv2.rectangle(ov, (0,0), (info.width, 36), (10,10,10), -1)
@@ -163,6 +252,12 @@ def run_goal_pipeline(
                     col["frames"].append((frame_id, out_f))
                     if len(col["frames"]) >= post_buf_size:
                         col["done"] = True
+
+            # Stop early once we have enough post-goal frames for all events
+            if max_goals is not None and len(all_events) >= max_goals:
+                if all(col["done"] for col in post_collectors.values()):
+                    print(f"\n  --max-goals {max_goals} reached — stopping early.")
+                    break
 
             if frame_id % 300 == 0:
                 print(f"    ...frame {frame_id}/{total}  ({frame_id/info.fps:.0f}s)", flush=True)
@@ -203,9 +298,13 @@ def run_goal_pipeline(
             if not ret:
                 break
             is_flash = abs(fid - ev.frame_id) <= int(info.fps * 0.5)
-            out_f = _draw_rois(frame, rois,
-                               fired_idxs={ev.pocket_idx} if is_flash else set(),
-                               flash=is_flash)
+            fired_set = {ev.pocket_idx} if is_flash else set()
+            out_f = _draw_overlay(
+                frame, rois, approach_rois_saved,
+                [0.0]*len(rois), [0.0]*len(rois),
+                ["GOAL" if (is_flash and i == ev.pocket_idx) else "IDLE" for i in range(len(rois))],
+                fired_idxs=fired_set, flash=is_flash,
+            )
             if fid == ev.frame_id:
                 cv2.rectangle(out_f, (3,3), (info.width-3, info.height-3), (0,50,255), 4)
                 tag, tc = "GOAL!", (0, 50, 255)
