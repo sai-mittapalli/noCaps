@@ -113,16 +113,18 @@ const MatchesPage = {
     const colA = WebRTCHelper.avatarColor(m.teamA);
     const colB = WebRTCHelper.avatarColor(m.teamB);
     const streaming = m.cameras.filter(c => c.isStreaming).length;
+    const clockLabel = m.clock || (m.isLive ? `${streaming} cam${streaming !== 1 ? 's' : ''}` : '');
+    const isUpcoming = !m.isLive && m.cameras.length === 0;
     const scoreA = m.scoreA != null ? m.scoreA : '–';
     const scoreB = m.scoreB != null ? m.scoreB : '–';
-    const clockLabel = m.clock || (m.isLive ? `${streaming} cam${streaming !== 1 ? 's' : ''}` : '');
+    const dateLabel = new Date(m.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     return `
-      <div class="match-card" onclick="navigate('watch', { code: '${m.code}' })">
+      <div class="match-card glass" onclick="navigate('watch', { code: '${m.code}' })">
         <div class="match-card-top">
           <span class="match-sport">${m.sport || 'Sport'}</span>
           ${m.isLive
             ? `<span class="match-clock">${clockLabel}</span>`
-            : `<span style="font-size:12px;color:var(--text-3)">${m.venue || new Date(m.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'}) || ''}</span>`
+            : `<span class="match-date">${m.venue || dateLabel}</span>`
           }
         </div>
         <div class="match-teams">
@@ -131,7 +133,10 @@ const MatchesPage = {
             <span class="match-team-name">${m.teamA}</span>
           </div>
           <div class="match-score">
-            <span>${scoreA}</span><span class="match-score-sep">:</span><span>${scoreB}</span>
+            ${isUpcoming
+              ? `<span class="match-score-vs">vs</span>`
+              : `<span>${scoreA}</span><span class="match-score-sep">–</span><span>${scoreB}</span>`
+            }
           </div>
           <div class="match-team right">
             <div class="avatar ${colB}">${WebRTCHelper.initials(m.teamB)}</div>

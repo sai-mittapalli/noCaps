@@ -5,24 +5,23 @@ const ReplaysPage = {
     return `<div class="replays-page" id="replaysPage">
       <div class="replays-section-title">AI Highlights</div>
 
-      <!-- Billiards AI highlight -->
+      <!-- AI multi-angle highlight reel -->
       <div class="replay-feature-card">
         <div class="replay-feature-header">
           <div class="replay-feature-meta">
             <span class="replay-sport-badge">🎱 Billiards</span>
             <span class="replay-ai-badge">AI</span>
           </div>
-          <div class="replay-feature-title">Real Game · Goals Reel</div>
-          <div class="replay-feature-sub">Auto-detected goals · Wide + Zoom + Slo-Mo</div>
+          <div class="replay-feature-title">Real Game 2 · Goals Reel</div>
+          <div class="replay-feature-sub">16 goals · Multi-angle · Instant replay transitions</div>
         </div>
         <div class="replay-video-wrap">
           <video
             id="billiardsVideo"
-            src="/highlights/billiards"
+            src="/highlights/billiards-replay"
             controls
             playsinline
             preload="metadata"
-            poster=""
           ></video>
         </div>
       </div>
