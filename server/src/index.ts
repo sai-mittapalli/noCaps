@@ -1,11 +1,14 @@
+import 'dotenv/config';
+
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
-import routes from './routes';
+import createRouter from './routes';
 import { setupSocket } from './socket';
+import { resetAllLiveStatus } from './matchStore';
 
 const app = express();
 const httpServer = createServer(app);
@@ -16,16 +19,21 @@ const io = new Server(httpServer, {
 
 app.use(cors());
 app.use(express.json());
-app.use('/api', routes);
+app.use('/api', createRouter(io));
+
+// Health check — must be before static middleware for Railway
+app.get('/health', (_req, res) => {
+  res.json({ status: 'nocaps server running' });
+});
 
 // Serve web app
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // Full game video streaming with range-request support (for seeking)
 const GAME_VIDEOS: Record<string, string> = {
-  lateral:  path.resolve(__dirname, '..', '..', 'ours', 'IMG_1826.MOV'),
-  frontal:  path.resolve(__dirname, '..', '..', 'ours', 'IMG_5254.MOV'),
-  diagonal: path.resolve(__dirname, '..', '..', 'ours', 'IMG_7658 2.MOV'),
+  lateral:  path.resolve(__dirname, '..', '..', 'billiards_dataset', 'realgame-2', 'IMG_1826.MOV'),
+  frontal:  path.resolve(__dirname, '..', '..', 'billiards_dataset', 'realgame-2', 'IMG_5254.MOV'),
+  diagonal: path.resolve(__dirname, '..', '..', 'billiards_dataset', 'realgame-2', 'IMG_7658.MOV'),
 };
 
 app.get('/game/:camera', (req, res) => {
@@ -33,7 +41,6 @@ app.get('/game/:camera', (req, res) => {
   if (!filePath || !fs.existsSync(filePath)) { res.status(404).send('Video not found'); return; }
   const stat      = fs.statSync(filePath);
   const fileSize  = stat.size;
-  const mimeType  = filePath.endsWith('.MOV') ? 'video/mp4' : 'video/mp4';
   const range     = req.headers.range;
   if (range) {
     const [startStr, endStr] = range.replace(/bytes=/, '').split('-');
@@ -43,28 +50,25 @@ app.get('/game/:camera', (req, res) => {
       'Content-Range':  `bytes ${start}-${end}/${fileSize}`,
       'Accept-Ranges':  'bytes',
       'Content-Length': end - start + 1,
-      'Content-Type':   mimeType,
+      'Content-Type':   'video/mp4',
     });
     fs.createReadStream(filePath, { start, end }).pipe(res);
   } else {
-    res.writeHead(200, { 'Content-Length': fileSize, 'Content-Type': mimeType, 'Accept-Ranges': 'bytes' });
+    res.writeHead(200, { 'Content-Length': fileSize, 'Content-Type': 'video/mp4', 'Accept-Ranges': 'bytes' });
     fs.createReadStream(filePath).pipe(res);
   }
 });
 
 // Billiards highlight video
 app.get('/highlights/billiards', (_req, res) => {
-  res.sendFile(
-    path.resolve(__dirname, '..', '..', 'billiards_dataset',
-      'realgame-1', 'events', 'IMG_5253', 'highlights.mp4'),
-    { headers: { 'Content-Type': 'video/mp4' } }
-  );
+  const filePath = path.resolve(__dirname, '..', '..', 'billiards_dataset', 'realgame-1', 'events', 'IMG_5253', 'highlights.mp4');
+  if (!fs.existsSync(filePath)) { res.status(404).send('Not found'); return; }
+  res.sendFile(filePath, { headers: { 'Content-Type': 'video/mp4' } });
 });
 
-// Multi-angle highlight reel (with transitions)
+// Multi-angle highlight reel
 app.get('/highlights/billiards-replay', (req, res) => {
-  const filePath = path.resolve(__dirname, '..', '..', 'billiards_dataset',
-    'realgame-2', 'highlights_output', 'highlights_reel_v4_full.mp4');
+  const filePath = path.resolve(__dirname, '..', '..', 'billiards_dataset', 'realgame-2', 'highlights_output', 'highlights_reel_v4_full.mp4');
   if (!fs.existsSync(filePath)) { res.status(404).send('Not found'); return; }
   const stat     = fs.statSync(filePath);
   const fileSize = stat.size;
@@ -94,7 +98,7 @@ app.get('/test-camera', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'test-camera.html'));
 });
 
-// SPA catch-all — serve index.html for any non-API route
+// SPA catch-all
 app.get(/^(?!\/api).*/, (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
@@ -102,6 +106,14 @@ app.get(/^(?!\/api).*/, (_req, res) => {
 setupSocket(io);
 
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, () => {
-  console.log(`[nocaps] server running on http://localhost:${PORT}`);
-});
+
+resetAllLiveStatus()
+  .then(() => {
+    httpServer.listen(PORT, () => {
+      console.log(`[nocaps] server running on http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('[nocaps] failed to connect to database:', err.message);
+    process.exit(1);
+  });

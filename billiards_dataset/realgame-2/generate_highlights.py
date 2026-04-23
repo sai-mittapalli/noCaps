@@ -14,7 +14,7 @@ TEMP     = os.path.join(OUT, "tmp_v4")
 
 LATERAL  = os.path.join(BASE, "IMG_1826.MOV")
 FRONTAL  = os.path.join(BASE, "IMG_5254.MOV")
-DIAGONAL = os.path.join(BASE, "IMG_7658 2.MOV")
+DIAGONAL = os.path.join(BASE, "IMG_7658.MOV")
 
 # ── Test mode ──────────────────────────────────────────────────────────────────
 TEST_MODE   = False  # set False for full 16-event run

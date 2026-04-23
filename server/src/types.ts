@@ -30,6 +30,10 @@ export interface MatchDTO {
   createdAt: string;
   isLive: boolean;
   cameras: CameraDTO[];
+  scoreA: number;
+  scoreB: number;
+  hostId: string | null;
+  endedAt: string | null;
   isDemo?: boolean;
   isFullGame?: boolean;
 }
