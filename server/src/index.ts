@@ -29,34 +29,17 @@ app.get('/health', (_req, res) => {
 // Serve web app
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-// Full game video streaming with range-request support (for seeking)
+// Full game video streaming — redirect to Supabase Storage
 const GAME_VIDEOS: Record<string, string> = {
-  lateral:  path.resolve(__dirname, '..', '..', 'billiards_dataset', 'realgame-2', 'IMG_1826.MOV'),
-  frontal:  path.resolve(__dirname, '..', '..', 'billiards_dataset', 'realgame-2', 'IMG_5254.MOV'),
-  diagonal: path.resolve(__dirname, '..', '..', 'billiards_dataset', 'realgame-2', 'IMG_7658.MOV'),
+  lateral:  'https://hzhstyjvaojeooqqsoyg.supabase.co/storage/v1/object/public/videos/lateral_compressed.mp4',
+  frontal:  'https://hzhstyjvaojeooqqsoyg.supabase.co/storage/v1/object/public/videos/frontal_compressed.mp4',
+  diagonal: 'https://hzhstyjvaojeooqqsoyg.supabase.co/storage/v1/object/public/videos/diagonal_compressed.mp4',
 };
 
 app.get('/game/:camera', (req, res) => {
-  const filePath = GAME_VIDEOS[req.params.camera];
-  if (!filePath || !fs.existsSync(filePath)) { res.status(404).send('Video not found'); return; }
-  const stat      = fs.statSync(filePath);
-  const fileSize  = stat.size;
-  const range     = req.headers.range;
-  if (range) {
-    const [startStr, endStr] = range.replace(/bytes=/, '').split('-');
-    const start = parseInt(startStr, 10);
-    const end   = endStr ? parseInt(endStr, 10) : Math.min(start + 10 * 1024 * 1024, fileSize - 1);
-    res.writeHead(206, {
-      'Content-Range':  `bytes ${start}-${end}/${fileSize}`,
-      'Accept-Ranges':  'bytes',
-      'Content-Length': end - start + 1,
-      'Content-Type':   'video/mp4',
-    });
-    fs.createReadStream(filePath, { start, end }).pipe(res);
-  } else {
-    res.writeHead(200, { 'Content-Length': fileSize, 'Content-Type': 'video/mp4', 'Accept-Ranges': 'bytes' });
-    fs.createReadStream(filePath).pipe(res);
-  }
+  const url = GAME_VIDEOS[req.params.camera];
+  if (!url) { res.status(404).send('Video not found'); return; }
+  res.redirect(url);
 });
 
 // Billiards highlight video
